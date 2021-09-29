@@ -16,7 +16,6 @@ import (
 // For customization options, see https://docs.battlesnake.com/references/personalization
 // TIP: If you open your Battlesnake URL in browser you should see this data.
 func info() BattlesnakeInfoResponse {
-	log.Println("INFO")
 	return BattlesnakeInfoResponse{
 		APIVersion: "1",
 		Author:     "choww",        // TODO: Your Battlesnake username
@@ -63,10 +62,26 @@ func move(state GameState) BattlesnakeMoveResponse {
 		possibleMoves["up"] = false
 	}
 
-	// TODO: Step 1 - Don't hit walls.
+	// Step 1 - Don't hit walls.
 	// Use information in GameState to prevent your Battlesnake from moving beyond the boundaries of the board.
-	// boardWidth := state.Board.Width
-	// boardHeight := state.Board.Height
+	boardWidth := state.Board.Width - 1
+	boardHeight := state.Board.Height - 1
+
+  // distance of head from the walls
+  distanceFromTop := boardHeight - myHead.Y
+  distanceFromRight := boardWidth - myHead.X
+
+  if distanceFromTop == 0 {
+    possibleMoves["up"] = false
+  } else if distanceFromRight == 0 {
+    possibleMoves["right"] = false
+  } else if myHead.Y == 0 {  // at the bottom wall
+    possibleMoves["down"] = false
+  } else if myHead.X == 0 {  // at the left wall
+    possibleMoves["left"] = false
+  }
+
+  log.Printf("body %#v", state.You)
 
 	// TODO: Step 2 - Don't hit yourself.
 	// Use information in GameState to prevent your Battlesnake from colliding with itself.
@@ -88,6 +103,8 @@ func move(state GameState) BattlesnakeMoveResponse {
 			safeMoves = append(safeMoves, move)
 		}
 	}
+
+  log.Printf("save moves: %v", safeMoves)
 
 	if len(safeMoves) == 0 {
 		nextMove = "down"

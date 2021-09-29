@@ -3,3 +3,4 @@
 .idea
 .vscode
 infrastructure
+src/starter-snake-go
