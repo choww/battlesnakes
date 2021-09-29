@@ -6,7 +6,7 @@ This is a basic implementation of the [Battlesnake API](https://docs.battlesnake
 
 ## Technologies Used
 
-* [Go 1.13 (or later)](https://golang.org/)
+* [Go 1.16 (or later)](https://golang.org/)
 
 
 ## Quickstart
