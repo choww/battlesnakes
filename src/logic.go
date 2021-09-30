@@ -7,6 +7,7 @@ package main
 
 import (
 	"log"
+  "math"
 	"math/rand"
 )
 
@@ -18,10 +19,10 @@ import (
 func info() BattlesnakeInfoResponse {
 	return BattlesnakeInfoResponse{
 		APIVersion: "1",
-		Author:     "choww",        // TODO: Your Battlesnake username
-		Color:      "#f5b900", // TODO: Personalize
-		Head:       "scarf", // TODO: Personalize
-		Tail:       "mouse", // TODO: Personalize
+		Author:     "choww",
+		Color:      "#f5b900",
+		Head:       "scarf",
+		Tail:       "mouse",
 	}
 }
 
@@ -36,6 +37,30 @@ func start(state GameState) {
 // It's purely for informational purposes, you don't have to make any decisions here.
 func end(state GameState) {
 	log.Printf("%s END\n\n", state.Game.ID)
+}
+
+// get move to eliminate based on distance from head
+// axis refers to whether the distance value is along the X or Y axis
+func moveToEliminate(distance int, axis string) string {
+  direction := map[string]map[string]string{
+    "X": {
+      "positive": "left",
+      "negative": "right",
+    },
+    "Y": {
+      "positive": "down",
+      "negative": "up",
+    },
+  }
+  isNextToHead := math.Abs(float64(distance)) == 1
+  if isNextToHead {
+    if distance > 0 {
+      return direction[axis]["positive"]
+    }
+
+    return direction[axis]["negative"]
+  }
+  return ""
 }
 
 // This function is called on every turn of a game. Use the provided GameState to decide
@@ -73,19 +98,35 @@ func move(state GameState) BattlesnakeMoveResponse {
 
   if distanceFromTop == 0 {
     possibleMoves["up"] = false
-  } else if distanceFromRight == 0 {
-    possibleMoves["right"] = false
   } else if myHead.Y == 0 {  // at the bottom wall
     possibleMoves["down"] = false
+  }
+
+  if distanceFromRight == 0 {
+    possibleMoves["right"] = false
   } else if myHead.X == 0 {  // at the left wall
     possibleMoves["left"] = false
   }
 
-  log.Printf("body %#v", state.You)
 
-	// TODO: Step 2 - Don't hit yourself.
+	// : Step 2 - Don't hit yourself.
 	// Use information in GameState to prevent your Battlesnake from colliding with itself.
-	// mybody := state.You.Body
+  myBody := state.You.Body[1:] // the first coordinate is always the head, no need to include it
+  for _, coord := range myBody {
+    var direction string
+    // we only need to worry about coordinates that have the same Y coordinate and is X +/- 1 away
+    if coord.Y == myHead.Y {
+      distanceFromHead := myHead.X - coord.X
+      direction = moveToEliminate(distanceFromHead, "X")
+    } else if coord.X == myHead.X {
+      distanceFromHead := myHead.Y - coord.Y
+      direction = moveToEliminate(distanceFromHead, "Y")
+    }
+
+    if len(direction) > 0 {
+      possibleMoves[direction] = false
+    }
+  }
 
 	// TODO: Step 3 - Don't collide with others.
 	// Use information in GameState to prevent your Battlesnake from colliding with others.
@@ -104,7 +145,6 @@ func move(state GameState) BattlesnakeMoveResponse {
 		}
 	}
 
-  log.Printf("save moves: %v", safeMoves)
 
 	if len(safeMoves) == 0 {
 		nextMove = "down"
@@ -113,6 +153,10 @@ func move(state GameState) BattlesnakeMoveResponse {
 		nextMove = safeMoves[rand.Intn(len(safeMoves))]
 		log.Printf("%s MOVE %d: %s\n", state.Game.ID, state.Turn, nextMove)
 	}
+
+  log.Printf("🐍 body: %v", state.You.Body)
+  log.Printf("save moves: %v\n", safeMoves)
+
 	return BattlesnakeMoveResponse{
 		Move: nextMove,
 	}
