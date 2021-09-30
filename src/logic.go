@@ -39,29 +39,6 @@ func end(state GameState) {
 	log.Printf("%s END\n\n", state.Game.ID)
 }
 
-// get move to eliminate based on distance from head
-// axis refers to whether the distance value is along the X or Y axis
-func moveToEliminate(distance int, axis string) string {
-  direction := map[string]map[string]string{
-    "X": {
-      "positive": "left",
-      "negative": "right",
-    },
-    "Y": {
-      "positive": "down",
-      "negative": "up",
-    },
-  }
-  isNextToHead := math.Abs(float64(distance)) == 1
-  if isNextToHead {
-    if distance > 0 {
-      return direction[axis]["positive"]
-    }
-
-    return direction[axis]["negative"]
-  }
-  return ""
-}
 
 // This function is called on every turn of a game. Use the provided GameState to decide
 // where to move -- valid moves are "up", "down", "left", or "right".
@@ -113,23 +90,34 @@ func move(state GameState) BattlesnakeMoveResponse {
 	// Use information in GameState to prevent your Battlesnake from colliding with itself.
   myBody := state.You.Body[1:] // the first coordinate is always the head, no need to include it
   for _, coord := range myBody {
-    var direction string
-    // we only need to worry about coordinates that have the same Y coordinate and is X +/- 1 away
-    if coord.Y == myHead.Y {
-      distanceFromHead := myHead.X - coord.X
-      direction = moveToEliminate(distanceFromHead, "X")
-    } else if coord.X == myHead.X {
-      distanceFromHead := myHead.Y - coord.Y
-      direction = moveToEliminate(distanceFromHead, "Y")
-    }
+    direction := avoid(coord, myHead)
 
     if len(direction) > 0 {
       possibleMoves[direction] = false
     }
   }
 
-	// TODO: Step 3 - Don't collide with others.
+	// Step 3 - Don't collide with others.
 	// Use information in GameState to prevent your Battlesnake from colliding with others.
+  snakes := state.Board.Snakes
+  myName := state.You.Name
+  var otherSnakes []Battlesnake
+  for _, snake := range snakes {
+    if (snake.Name == myName) {
+      continue
+    }
+    otherSnakes = append(otherSnakes, snake)
+  }
+
+  for _, snake := range otherSnakes {
+    for _, coord := range snake.Body {
+      direction := avoid(coord, myHead)
+
+      if len(direction) > 0 {
+        possibleMoves[direction] = false
+      }
+    }
+  }
 
 	// TODO: Step 4 - Find food.
 	// Use information in GameState to seek out and find food.
@@ -159,5 +147,6 @@ func move(state GameState) BattlesnakeMoveResponse {
 
 	return BattlesnakeMoveResponse{
 		Move: nextMove,
+    Shout: "YAY",
 	}
 }

@@ -4,6 +4,11 @@ import (
 	"testing"
 )
 
+type Scenario struct {
+  Me Battlesnake
+  State GameState
+}
+
 func TestNeckAvoidance(t *testing.T) {
 	// Arrange
 	me := Battlesnake{
@@ -19,7 +24,7 @@ func TestNeckAvoidance(t *testing.T) {
 	}
 
 	// Act 1,000x (this isn't a great way to test, but it's okay for starting out)
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < 100; i++ {
 		nextMove := move(state)
 		// Assert never move left
 		if nextMove.Move == "left" {
@@ -28,4 +33,41 @@ func TestNeckAvoidance(t *testing.T) {
 	}
 }
 
-// TODO: More GameState test cases!
+// TODO tests
+func TestAvoidWalls(t *testing.T) {
+  testCases := []Scenario {
+    // SCENARIO 1 - snake facing up
+    {
+      Me: Battlesnake{
+        Head: Coord{X: 7, Y: 4},
+        Body: []Coord{{X: 7, Y: 4}, {X: 7, Y: 3}, {X: 7, Y: 2}},
+      },
+      State: GameState{
+        Board: Board{
+          Height: 8,
+          Width: 8,
+        },
+        Snakes: []Battlesnake{}
+      },
+    },
+    // SCENARIO 2 - snake facing down
+    {
+      Me: Battlesnake{
+        Head: Coord{X: 6, 4},
+        Body: []Coord{{X: 6, Y: 4}, {X:6, Y: 5}, {X: 6, Y: 6}},
+      },
+      State: GameState{
+        Board: {
+          Height: 8,
+          Width: 8,
+        },
+        Snakes: []Battlesnake{},
+      },
+    },
+  }
+
+  for _, scenario := range testCases {
+    move(scenario.State)
+  }
+}
+
