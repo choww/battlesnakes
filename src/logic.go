@@ -7,7 +7,6 @@ package main
 
 import (
 	"log"
-  "math"
 	"math/rand"
 )
 
@@ -53,54 +52,44 @@ func move(state GameState) BattlesnakeMoveResponse {
 
 	// Step 0: Don't let your Battlesnake move back in on it's own neck
 	myHead := state.You.Body[0] // Coordinates of your head
-	myNeck := state.You.Body[1] // Coordinates of body piece directly behind your head (your "neck")
-	if myNeck.X < myHead.X {
-		possibleMoves["left"] = false
-	} else if myNeck.X > myHead.X {
-		possibleMoves["right"] = false
-	} else if myNeck.Y < myHead.Y {
-		possibleMoves["down"] = false
-	} else if myNeck.Y > myHead.Y {
-		possibleMoves["up"] = false
-	}
+	// myNeck := state.You.Body[1] // Coordinates of body piece directly behind your head (your "neck")
 
-	// Step 1 - Don't hit walls.
-	// Use information in GameState to prevent your Battlesnake from moving beyond the boundaries of the board.
-	boardWidth := state.Board.Width - 1
-	boardHeight := state.Board.Height - 1
+	// if myNeck.X < myHead.X { // neck is on the left
+	// 	possibleMoves["left"] = false
+	// } else if myNeck.X > myHead.X { // neck is on the right
+	// 	possibleMoves["right"] = false
+	// } else if myNeck.Y < myHead.Y { // neck is below head
+	// 	possibleMoves["down"] = false
+	// } else if myNeck.Y > myHead.Y { // neck is above head
+	// 	possibleMoves["up"] = false
+	// }
 
-  // distance of head from the walls
-  distanceFromTop := boardHeight - myHead.Y
-  distanceFromRight := boardWidth - myHead.X
-
-  if distanceFromTop == 0 {
-    possibleMoves["up"] = false
-  } else if myHead.Y == 0 {  // at the bottom wall
-    possibleMoves["down"] = false
+  // Step 1 - Don't hit walls.
+  // Use information in GameState to prevent your Battlesnake from moving beyond the boundaries of the board.
+  wallMoves := avoidWalls(state.Board, myHead)
+  for _, move := range wallMoves {
+    possibleMoves[move] = false
   }
 
-  if distanceFromRight == 0 {
-    possibleMoves["right"] = false
-  } else if myHead.X == 0 {  // at the left wall
-    possibleMoves["left"] = false
-  }
-
-
-	// : Step 2 - Don't hit yourself.
-	// Use information in GameState to prevent your Battlesnake from colliding with itself.
+  // : Step 2 - Don't hit yourself.
+  // Use information in GameState to prevent your Battlesnake from colliding with itself.
+  // TODO avoid getting stuck on the board OR eliminate all all moves when in certain situations
   myBody := state.You.Body[1:] // the first coordinate is always the head, no need to include it
   for _, coord := range myBody {
-    direction := avoid(coord, myHead)
+    var direction string = avoidNeighbour(coord, myHead)
 
     if len(direction) > 0 {
       possibleMoves[direction] = false
     }
   }
 
-	// Step 3 - Don't collide with others.
-	// Use information in GameState to prevent your Battlesnake from colliding with others.
+  //TODO can i combine the coordinates for steps 2 & 3?
+
+  // Step 3 - Don't collide with others.
+  // Use information in GameState to prevent your Battlesnake from colliding with others.
   snakes := state.Board.Snakes
   myName := state.You.Name
+
   var otherSnakes []Battlesnake
   for _, snake := range snakes {
     if (snake.Name == myName) {
@@ -111,7 +100,7 @@ func move(state GameState) BattlesnakeMoveResponse {
 
   for _, snake := range otherSnakes {
     for _, coord := range snake.Body {
-      direction := avoid(coord, myHead)
+      var direction string = avoidNeighbour(coord, myHead)
 
       if len(direction) > 0 {
         possibleMoves[direction] = false
@@ -119,8 +108,29 @@ func move(state GameState) BattlesnakeMoveResponse {
     }
   }
 
-	// TODO: Step 4 - Find food.
-	// Use information in GameState to seek out and find food.
+  //  Step 4 - Find food.
+  // Use information in GameState to seek out and find food.
+  food := state.Board.Food
+  // find food we can get to right now
+  var foodInPath []Coord = findNeighbours(myHead, food)
+  var closestFood Coord = findClosestNeighbour(state.Board, myHead, foodInPath)
+
+   // eliminate all moves that aren't the desired direction
+  if (closestFood.X == myHead.X) {
+    yDistance := closestFood.Y - myHead.Y
+    if yDistance > 0 {
+      eliminateUnselectedMoves("up", possibleMoves)
+    } else {
+      eliminateUnselectedMoves("down", possibleMoves)
+    }
+  } else if (closestFood.Y == myHead.Y) {
+    xDistance := closestFood.X - myHead.X
+    if xDistance > 0 {
+      eliminateUnselectedMoves("right", possibleMoves)
+    } else {
+      eliminateUnselectedMoves("left", possibleMoves)
+    }
+  }
 
 	// Finally, choose a move from the available safe moves.
 	// TODO: Step 5 - Select a move to make based on strategy, rather than random.

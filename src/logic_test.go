@@ -2,12 +2,9 @@ package main
 
 import (
 	"testing"
+  "reflect"
 )
 
-type Scenario struct {
-  Me Battlesnake
-  State GameState
-}
 
 func TestNeckAvoidance(t *testing.T) {
 	// Arrange
@@ -33,41 +30,117 @@ func TestNeckAvoidance(t *testing.T) {
 	}
 }
 
-// TODO tests
-func TestAvoidWalls(t *testing.T) {
-  testCases := []Scenario {
-    // SCENARIO 1 - snake facing up
-    {
-      Me: Battlesnake{
-        Head: Coord{X: 7, Y: 4},
-        Body: []Coord{{X: 7, Y: 4}, {X: 7, Y: 3}, {X: 7, Y: 2}},
-      },
-      State: GameState{
-        Board: Board{
-          Height: 8,
-          Width: 8,
-        },
-        Snakes: []Battlesnake{}
-      },
-    },
-    // SCENARIO 2 - snake facing down
-    {
-      Me: Battlesnake{
-        Head: Coord{X: 6, 4},
-        Body: []Coord{{X: 6, Y: 4}, {X:6, Y: 5}, {X: 6, Y: 6}},
-      },
-      State: GameState{
-        Board: {
-          Height: 8,
-          Width: 8,
-        },
-        Snakes: []Battlesnake{},
-      },
-    },
-  }
-
-  for _, scenario := range testCases {
-    move(scenario.State)
-  }
+type Scenario struct {
+  Desc string
+  Head Coord
+  Avoid Coord
+  Expected interface{}
 }
 
+func TestAvoidance(t *testing.T) {
+  t.Run("avoid moving out of bounds", func (t *testing.T) {
+	  board := Board{
+      Width: 8,
+      Height: 8,
+	  }
+    scenarios := []Scenario {
+      {
+        Desc: "avoid up",
+        Head: Coord{3,7},
+        Avoid: Coord{3,7},
+        Expected: []string{"up"},
+      },
+      {
+        Desc: "avoid down",
+        Head: Coord{3,0},
+        Avoid: Coord{3,0},
+        Expected: []string{"down"},
+      },
+      {
+        Desc: "avoid left",
+        Head: Coord{0,3},
+        Avoid: Coord{0,3},
+        Expected: []string{"left"},
+      },
+      {
+        Desc: "avoid right",
+        Head: Coord{7,3},
+        Avoid: Coord{7,3},
+        Expected: []string{"right"},
+      },
+      {
+        Desc: "avoid up & left",
+        Head: Coord{0,7},
+        Avoid: Coord{0,7},
+        Expected: []string{"up", "left"},
+      },
+      {
+        Desc: "avoid up & right",
+        Head: Coord{7,7},
+        Avoid: Coord{7,7},
+        Expected: []string{"up", "right"},
+      },
+      {
+        Desc: "avoid down & right",
+        Head: Coord{7,0},
+        Avoid: Coord{7,0},
+        Expected: []string{"down", "right"},
+      },
+      {
+        Desc: "avoid down & left",
+        Head: Coord{0,0},
+        Avoid: Coord{0,0},
+        Expected: []string{"down", "left"},
+      },
+    }
+
+    for _, scenario := range scenarios {
+      got := avoidWalls(board, scenario.Head)
+      if (!reflect.DeepEqual(got, scenario.Expected)) {
+        t.Errorf("Scenario %s: expected to avoid %#v, got %#v", scenario.Desc, scenario.Expected, got)
+      }
+    }
+  })
+
+  t.Run("avoid anything right next to my head", func(t *testing.T) {
+    scenarios := []Scenario {
+      {
+        Desc: "avoid up",
+        Head: Coord{4,8},
+        Avoid: Coord{4,9},
+        Expected: "up",
+      },
+      {
+        Desc: "avoid down",
+        Head: Coord{4,8},
+        Avoid: Coord{4,7},
+        Expected: "down",
+      },
+      {
+        Desc: "avoid left",
+        Head: Coord{4,8},
+        Avoid: Coord{3,8},
+        Expected: "left",
+      },
+      {
+        Desc: "avoid right",
+        Head: Coord{4,8},
+        Avoid: Coord{5,8},
+        Expected: "right",
+      },
+      {
+        Desc: "2 cells up",
+        Head: Coord{4,7},
+        Avoid: Coord{4,9},
+        Expected: "",
+      },
+    }
+
+    for _, scenario := range scenarios {
+      got := avoidNeighbour(scenario.Avoid, scenario.Head)
+      if (got != scenario.Expected) {
+        t.Errorf("Scenario %s: expected to avoid %s, got %s", scenario.Desc, scenario.Expected, got)
+      }
+    }
+  })
+}
