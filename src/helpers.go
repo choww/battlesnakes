@@ -77,9 +77,10 @@ func avoidWalls(board Board, myHead Coord) (movesToAvoid []string) {
   return movesToAvoid
 }
 
-// find coordinates on the same X or Y axis
-func findNeighbours(myHead Coord, coordinates []Coord) (neighbours []Coord) {
+func findNeighboursInPath(myHead Coord, coordinates []Coord) (neighbours []Coord) {
   for _, coord := range coordinates {
+
+    // only add coordinates on the same X or Y axis as myHead since we can't move diagonally
     if (coord.X == myHead.X || coord.Y == myHead.Y) {
       neighbours = append(neighbours, coord)
     }
@@ -90,12 +91,14 @@ func findNeighbours(myHead Coord, coordinates []Coord) (neighbours []Coord) {
 func findClosestNeighbour(board Board, myHead Coord, neighbours []Coord) (neighbour Coord) {
   // this is the current closest neighbour--start off at max value
   neighbour = Coord{
-    X: board.Width,
-    Y: board.Height,
+    X: board.Width - 1,
+    Y: board.Height - 1,
   }
+
+  headLocation := float64(myHead.X + myHead.Y)
+  // TODO neighbour has to be unobstructuted
   for _, coord := range neighbours {
     targetLocation := float64(coord.X + coord.Y)
-    headLocation := float64(myHead.X + myHead.Y)
 
     currMinValue := float64(neighbour.X + neighbour.Y)
     targetDistance := math.Abs(headLocation - targetLocation)
@@ -110,4 +113,47 @@ func findClosestNeighbour(board Board, myHead Coord, neighbours []Coord) (neighb
   return neighbour
 }
 
+func findWallNeighbours(board Board, coordinates []Coord, axis string) (neighbours []Coord) {
+  boardWidth := board.Width - 1
+  boardHeight := board.Height -1
 
+  for _, coord := range coordinates {
+    if (coord.X == 0 || coord.X == boardWidth || coord.Y == 0 || coord.Y == boardHeight ) {
+      neighbours = append(neighbours, coord)
+    }
+  }
+
+  return neighbours
+}
+
+func avoidBeingStuck(board Board, myHead Coord, neighbours []Coord) (avoid string) {
+  boardWidth := board.Width - 1
+  boardHeight := board.Height -1
+
+  var wallNeighbours []Coord
+
+  if (myHead.X == 0 || myHead.X == boardWidth) {
+    wallNeighbours = findWallNeighbours(board, neighbours, "Y")
+    for _, coord := range wallNeighbours {
+      distance := coord.Y - myHead.Y
+      if distance <= 2  {
+        avoid = "up"
+      } else if distance <= -2 {
+        avoid = "down"
+      }
+    }
+  } else if (myHead.Y == 0 || myHead.Y == boardHeight) {
+    wallNeighbours = findWallNeighbours(board, neighbours, "X")
+    for _, coord := range wallNeighbours {
+      distance := coord.X - myHead.X
+      if distance <= 2 {
+        avoid = "right"
+      } else if distance >= -2 {
+        avoid = "left"
+      }
+    }
+  }
+
+  return avoid
+
+}

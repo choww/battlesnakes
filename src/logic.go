@@ -35,6 +35,7 @@ func start(state GameState) {
 // This function is called when a game your Battlesnake was in has ended.
 // It's purely for informational purposes, you don't have to make any decisions here.
 func end(state GameState) {
+  log.Printf("final position: %v\n", state.You.Head)
 	log.Printf("%s END\n\n", state.Game.ID)
 }
 
@@ -54,22 +55,14 @@ func move(state GameState) BattlesnakeMoveResponse {
 	myHead := state.You.Body[0] // Coordinates of your head
 	// myNeck := state.You.Body[1] // Coordinates of body piece directly behind your head (your "neck")
 
-	// if myNeck.X < myHead.X { // neck is on the left
-	// 	possibleMoves["left"] = false
-	// } else if myNeck.X > myHead.X { // neck is on the right
-	// 	possibleMoves["right"] = false
-	// } else if myNeck.Y < myHead.Y { // neck is below head
-	// 	possibleMoves["down"] = false
-	// } else if myNeck.Y > myHead.Y { // neck is above head
-	// 	possibleMoves["up"] = false
-	// }
-
   // Step 1 - Don't hit walls.
   // Use information in GameState to prevent your Battlesnake from moving beyond the boundaries of the board.
-  wallMoves := avoidWalls(state.Board, myHead)
-  for _, move := range wallMoves {
+  wallAvoidMoves := avoidWalls(state.Board, myHead)
+  for _, move := range wallAvoidMoves {
     possibleMoves[move] = false
   }
+
+  // log.Printf("wall moves to avoid %s", wallAvoidMoves)
 
   // : Step 2 - Don't hit yourself.
   // Use information in GameState to prevent your Battlesnake from colliding with itself.
@@ -82,6 +75,8 @@ func move(state GameState) BattlesnakeMoveResponse {
       possibleMoves[direction] = false
     }
   }
+
+  // log.Printf("save moves %#v", possibleMoves)
 
   //TODO can i combine the coordinates for steps 2 & 3?
 
@@ -110,30 +105,36 @@ func move(state GameState) BattlesnakeMoveResponse {
 
   //  Step 4 - Find food.
   // Use information in GameState to seek out and find food.
-  food := state.Board.Food
-  // find food we can get to right now
-  var foodInPath []Coord = findNeighbours(myHead, food)
-  var closestFood Coord = findClosestNeighbour(state.Board, myHead, foodInPath)
+  if state.You.Health <= 50 {
+    food := state.Board.Food
+    // find food we can get to right now
+    var foodInPath []Coord = findNeighboursInPath(myHead, food)
+    var closestFood Coord = findClosestNeighbour(state.Board, myHead, foodInPath)
 
-   // eliminate all moves that aren't the desired direction
-  if (closestFood.X == myHead.X) {
-    yDistance := closestFood.Y - myHead.Y
-    if yDistance > 0 {
-      eliminateUnselectedMoves("up", possibleMoves)
-    } else {
-      eliminateUnselectedMoves("down", possibleMoves)
-    }
-  } else if (closestFood.Y == myHead.Y) {
-    xDistance := closestFood.X - myHead.X
-    if xDistance > 0 {
-      eliminateUnselectedMoves("right", possibleMoves)
-    } else {
-      eliminateUnselectedMoves("left", possibleMoves)
+     // eliminate all moves that aren't the desired direction
+
+    if (closestFood.X == myHead.X) {
+      yDistance := closestFood.Y - myHead.Y
+      if yDistance > 0 {
+        eliminateUnselectedMoves("up", possibleMoves)
+      } else {
+        eliminateUnselectedMoves("down", possibleMoves)
+      }
+    } else if (closestFood.Y == myHead.Y) {
+      xDistance := closestFood.X - myHead.X
+      if xDistance > 0 {
+        eliminateUnselectedMoves("right", possibleMoves)
+      } else {
+        eliminateUnselectedMoves("left", possibleMoves)
+      }
     }
   }
 
 	// Finally, choose a move from the available safe moves.
 	// TODO: Step 5 - Select a move to make based on strategy, rather than random.
+  // stuckMove := avoidBeingStuck(state.Board, myHead, myBody)
+  // possibleMoves[stuckMove] = false
+
 	var nextMove string
 
 	safeMoves := []string{}
@@ -145,14 +146,16 @@ func move(state GameState) BattlesnakeMoveResponse {
 
 
 	if len(safeMoves) == 0 {
-		nextMove = "down"
+    // reevaluate := move(state)
+		// nextMove = reevaluate.Move // TODO change this
+    nextMove = "down"
 		log.Printf("%s MOVE %d: No safe moves detected! Moving %s\n", state.Game.ID, state.Turn, nextMove)
 	} else {
-		nextMove = safeMoves[rand.Intn(len(safeMoves))]
+		nextMove = safeMoves[rand.Intn(len(safeMoves))] // TODO change this
 		log.Printf("%s MOVE %d: %s\n", state.Game.ID, state.Turn, nextMove)
 	}
 
-  log.Printf("🐍 body: %v", state.You.Body)
+  // log.Printf("🐍 body: %v", state.You.Head)
   log.Printf("save moves: %v\n", safeMoves)
 
 	return BattlesnakeMoveResponse{
